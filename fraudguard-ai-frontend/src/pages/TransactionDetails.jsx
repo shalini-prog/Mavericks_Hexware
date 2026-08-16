@@ -199,7 +199,7 @@ export default function TransactionDetails() {
         </div>
         <div className="panel-body">
           {alert ? (
-            <AlertCard alert={alert} endpointsAvailable={false} onChanged={load} />
+            <AlertCard alert={alert} endpointsAvailable={true} onChanged={load} />
           ) : (
             <EmptyState title="No alert raised" message="This transaction did not generate a fraud alert." />
           )}
