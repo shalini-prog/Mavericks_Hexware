@@ -1,0 +1,93 @@
+.risk-gauge {
+  padding: 6px 4px 2px;
+}
+
+.risk-gauge-track {
+  position: relative;
+  height: 10px;
+  border-radius: var(--radius-full);
+  display: flex;
+  overflow: visible;
+  margin-bottom: 10px;
+}
+
+.risk-gauge-zone {
+  height: 100%;
+  flex: 1;
+}
+.risk-gauge-zone:first-child { border-radius: var(--radius-full) 0 0 var(--radius-full); }
+.risk-gauge-zone:last-child { border-radius: 0 var(--radius-full) var(--radius-full) 0; }
+
+.zone-low { background: color-mix(in srgb, var(--risk-low) 45%, var(--bg-inset)); }
+.zone-medium { background: color-mix(in srgb, var(--risk-medium) 45%, var(--bg-inset)); }
+.zone-high { background: color-mix(in srgb, var(--risk-high) 45%, var(--bg-inset)); }
+.zone-critical { background: color-mix(in srgb, var(--risk-critical) 45%, var(--bg-inset)); }
+
+.risk-gauge-marker {
+  position: absolute;
+  top: 50%;
+  width: 3px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  background: var(--text-primary);
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 0 3px var(--bg-elevated);
+  transition: left 400ms var(--ease-standard);
+}
+
+.risk-gauge-marker.marker-low { background: var(--risk-low); }
+.risk-gauge-marker.marker-medium { background: var(--risk-medium); }
+.risk-gauge-marker.marker-high { background: var(--risk-high); }
+.risk-gauge-marker.marker-critical { background: var(--risk-critical); }
+
+.risk-gauge-marker-value {
+  position: absolute;
+  top: -26px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.risk-gauge-scale {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+}
+
+.risk-gauge-labels {
+  display: flex;
+  gap: 16px;
+  letter-spacing: 0.04em;
+}
+
+.lbl-low { color: var(--risk-low); }
+.lbl-medium { color: var(--risk-medium); }
+.lbl-high { color: var(--risk-high); }
+.lbl-critical { color: var(--risk-critical); }
+
+.risk-gauge-result {
+  margin-top: 18px;
+  display: flex;
+  align-items: baseline;
+}
+
+.risk-gauge-result-score {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+}
+.risk-gauge-result-score.marker-low { color: var(--risk-low); }
+.risk-gauge-result-score.marker-medium { color: var(--risk-medium); }
+.risk-gauge-result-score.marker-high { color: var(--risk-high); }
+.risk-gauge-result-score.marker-critical { color: var(--risk-critical); }
+
+@media (max-width: 640px) {
+  .risk-gauge-labels { gap: 8px; font-size: 9px; }
+}

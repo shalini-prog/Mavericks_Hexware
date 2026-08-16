@@ -1,0 +1,64 @@
+.alert-card {
+  background: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+}
+
+.alert-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.alert-card-id-block {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.alert-card-id {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.alert-card-meta {
+  display: flex;
+  gap: 28px;
+  margin-bottom: 16px;
+}
+
+.alert-card-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.alert-card-meta-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.alert-card-status {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.alert-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.alert-card-soon {
+  font-size: 11px;
+  color: var(--text-disabled);
+  font-style: italic;
+}
