@@ -277,21 +277,96 @@ while True:
 
         producer.flush()
 
-        print("\n--------------------------------------")
+        print("\n======================================")
+        print("TRANSACTION GENERATED")
+        print("======================================")
+
+        print("Transaction ID          :", transaction["transaction_id"])
+        print("User ID                 :", transaction["user_id"])
+        print("Amount                  : ₹", transaction["amount"])
+        print("Average User Amount     : ₹", transaction["avg_user_amount"])
+        print("Amount Ratio            :", transaction["amount_ratio"])
+
+        print("\n--- Transaction Behaviour ---")
 
         print(
-            "Transaction:",
-            transaction["transaction_id"]
+            "Transactions Last 10 Min:",
+            transaction["transactions_last_10min"]
         )
 
         print(
-            "Amount: ₹",
-            transaction["amount"]
+            "Failed Attempts 10 Min  :",
+            transaction["failed_attempts_10min"]
+        )
+
+        print("\n--- Device & Location ---")
+
+        print(
+            "New Device              :",
+            transaction["new_device"]
         )
 
         print(
-            "Sent to Kafka topic: transactions"
+            "New Location            :",
+            transaction["new_location"]
         )
+
+        print(
+            "International           :",
+            transaction["international"]
+        )
+
+        print(
+            "Distance From Home      :",
+            transaction["distance_from_home"],
+            "km"
+        )
+
+        print("\n--- Merchant ---")
+
+        print(
+            "Merchant Risk           :",
+            transaction["merchant_risk"]
+        )
+
+        print("\n--- Account / Device ---")
+
+        print(
+            "Account Age             :",
+            transaction["account_age_days"],
+            "days"
+        )
+
+        print(
+            "Device Age              :",
+            transaction["device_age_days"],
+            "days"
+        )
+
+        print("\n--- Time Information ---")
+
+        print(
+            "Hour                    :",
+            transaction["hour"]
+        )
+
+        print(
+            "Day Of Week             :",
+            transaction["day_of_week"]
+        )
+
+        print(
+            "Weekend                 :",
+            transaction["is_weekend"]
+        )
+
+        print(
+            "Unusual Hour            :",
+            transaction["unusual_hour"]
+        )
+
+        print("\nSent to Kafka topic: transactions")
+        print("======================================")
 
     except Exception as e:
 

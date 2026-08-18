@@ -151,48 +151,128 @@ for message in consumer:
 
         transaction_record = {
 
+        # ==========================================
+        # BASIC TRANSACTION INFORMATION
+        # ==========================================
+
             "transaction_id":
-                transaction["transaction_id"],
+            transaction["transaction_id"],
 
             "user_id":
-                transaction["user_id"],
+            transaction["user_id"],
 
             "amount":
-                transaction["amount"],
+            transaction["amount"],
+
+            "avg_user_amount":
+            transaction["avg_user_amount"],
+
+            "amount_ratio":
+            transaction["amount_ratio"],
+
+
+            # ==========================================
+            # BEHAVIOURAL FEATURES
+            # ==========================================
+
+            "transactions_last_10min":
+            transaction["transactions_last_10min"],
+
+            "failed_attempts_10min":
+            transaction["failed_attempts_10min"],
+
+
+            # ==========================================
+            # DEVICE / LOCATION
+            # ==========================================
+
+            "new_device":
+            transaction["new_device"],
+
+            "new_location":
+            transaction["new_location"],
+
+            "international":
+            transaction["international"],
+
+            "distance_from_home":
+            transaction["distance_from_home"],
+
+
+            # ==========================================
+            # MERCHANT
+            # ==========================================
+
+            "merchant_risk":
+            transaction["merchant_risk"],
+
+
+            # ==========================================
+            # ACCOUNT / DEVICE
+            # ==========================================
+
+            "account_age_days":
+            transaction["account_age_days"],
+
+            "device_age_days":
+            transaction["device_age_days"],
+
+
+            # ==========================================
+            # TIME
+            # ==========================================
+
+            "hour":
+            transaction["hour"],
+
+            "day_of_week":
+            transaction["day_of_week"],
+
+            "is_weekend":
+            transaction["is_weekend"],
+
+            "unusual_hour":
+            transaction["unusual_hour"],
+
+
+            # ==========================================
+            # FRAUD MODEL RESULTS
+            # ==========================================
 
             "fraud_probability":
-                result["fraud_probability"],
+            result["fraud_probability"],
 
             "fraud_score":
-                result["fraud_score"],
+            result["fraud_score"],
 
             "anomaly_score":
-                result["anomaly_score"],
+            result["anomaly_score"],
 
             "rule_score":
-                result["rule_score"],
+            result["rule_score"],
 
             "final_risk_score":
-                result["final_risk_score"],
+            result["final_risk_score"],
 
             "risk_level":
-                result["risk_level"],
+            result["risk_level"],
 
             "reasons":
-                result["reasons"],
+            result["reasons"],
+
 
             # ==========================================
             # XAI DATA
             # ==========================================
 
             "ai_explanation":
-                xai_result["explanation"],
+            xai_result["explanation"],
 
             "shap_explanations":
-                xai_result["positive_shap_contributors"],
+            xai_result["positive_shap_contributors"],
 
             "rag_knowledge":
-                xai_result["retrieved_knowledge"]
+            xai_result["retrieved_knowledge"]
         }
 
 
