@@ -34,10 +34,10 @@ print("Anomaly model loaded!")
 
 
 # ==================================================
-# FEATURES
+# ORIGINAL FEATURES
 # ==================================================
 
-FEATURES = [
+BASE_FEATURES = [
     "amount",
     "avg_user_amount",
     "amount_ratio",
@@ -58,46 +58,214 @@ FEATURES = [
 
 
 # ==================================================
+# XGBOOST FEATURES
+# ==================================================
+
+ML_FEATURES = BASE_FEATURES + [
+
+    "amount_velocity",
+
+    "amount_merchant_risk",
+
+    "velocity_merchant_risk",
+
+    "combined_risk_signal",
+
+    "amount_failed_attempts",
+
+    "velocity_failed_attempts",
+
+    "amount_distance",
+
+    "merchant_distance"
+
+]
+
+
+# ==================================================
+# CREATE ML FEATURES
+# ==================================================
+
+def create_ml_features(transaction):
+
+    data = transaction.copy()
+
+
+    # ----------------------------------------------
+    # Amount + velocity
+    # ----------------------------------------------
+
+    data["amount_velocity"] = (
+        data["amount_ratio"]
+        * data["transactions_last_10min"]
+    )
+
+
+    # ----------------------------------------------
+    # Amount + merchant risk
+    # ----------------------------------------------
+
+    data["amount_merchant_risk"] = (
+        data["amount_ratio"]
+        * data["merchant_risk"]
+    )
+
+
+    # ----------------------------------------------
+    # Velocity + merchant risk
+    # ----------------------------------------------
+
+    data["velocity_merchant_risk"] = (
+        data["transactions_last_10min"]
+        * data["merchant_risk"]
+    )
+
+
+    # ----------------------------------------------
+    # Amount + velocity + merchant
+    # ----------------------------------------------
+
+    data["combined_risk_signal"] = (
+        data["amount_ratio"]
+        * data["transactions_last_10min"]
+        * data["merchant_risk"]
+    )
+
+
+    # ----------------------------------------------
+    # Amount + failed attempts
+    # ----------------------------------------------
+
+    data["amount_failed_attempts"] = (
+        data["amount_ratio"]
+        * data["failed_attempts_10min"]
+    )
+
+
+    # ----------------------------------------------
+    # Velocity + failed attempts
+    # ----------------------------------------------
+
+    data["velocity_failed_attempts"] = (
+        data["transactions_last_10min"]
+        * data["failed_attempts_10min"]
+    )
+
+
+    # ----------------------------------------------
+    # Amount + distance
+    # ----------------------------------------------
+
+    data["amount_distance"] = (
+        data["amount_ratio"]
+        * data["distance_from_home"]
+    )
+
+
+    # ----------------------------------------------
+    # Merchant + distance
+    # ----------------------------------------------
+
+    data["merchant_distance"] = (
+        data["merchant_risk"]
+        * data["distance_from_home"]
+    )
+
+
+    return data
+
+
+# ==================================================
+# CREATE DATAFRAME FOR XGBOOST
+# ==================================================
+
+def create_ml_dataframe(transaction):
+
+    data = create_ml_features(
+        transaction
+    )
+
+    X = pd.DataFrame(
+        [
+            [
+                data[feature]
+                for feature in ML_FEATURES
+            ]
+        ],
+        columns=ML_FEATURES
+    )
+
+    return X
+
+
+# ==================================================
+# CREATE DATAFRAME FOR ANOMALY MODEL
+# ==================================================
+
+def create_anomaly_dataframe(transaction):
+
+    X = pd.DataFrame(
+        [
+            [
+                transaction[feature]
+                for feature in BASE_FEATURES
+            ]
+        ],
+        columns=BASE_FEATURES
+    )
+
+    return X
+
+
+# ==================================================
 # SHAP EXPLANATION
 # ==================================================
 
 def calculate_shap_explanation(transaction):
 
-    X = pd.DataFrame(
-        [[transaction[feature] for feature in FEATURES]],
-        columns=FEATURES
+    X = create_ml_dataframe(
+        transaction
     )
 
-    # Calculate SHAP values
-    shap_values = shap_explainer.shap_values(X)
 
-    # Get values for this transaction
+    shap_values = shap_explainer.shap_values(
+        X
+    )
+
+
     values = shap_values[0]
 
-    # Pair feature names with SHAP values
+
     contributions = []
 
+
     for feature, value in zip(
-        FEATURES,
+        ML_FEATURES,
         values
     ):
 
         contributions.append({
+
             "feature": feature,
+
             "shap_value": round(
                 float(value),
                 4
             )
+
         })
 
-    # Sort by absolute contribution
+
     contributions.sort(
-        key=lambda x: abs(x["shap_value"]),
+        key=lambda x: abs(
+            x["shap_value"]
+        ),
         reverse=True
     )
 
-    # Keep top 5 contributors
+
     top_contributors = contributions[:5]
+
 
     return top_contributors
 
@@ -113,48 +281,43 @@ def calculate_rule_score(transaction):
     reasons = []
 
 
-    # ------------------------------------------------
-    # New device
-    # ------------------------------------------------
+    # ==================================================
+    # BASIC RISK SIGNALS
+    # ==================================================
 
+    # New device
     if transaction["new_device"] == 1:
 
-        score += 2
+        score += 3
 
         reasons.append(
             "Transaction from a new device"
         )
 
 
-    # ------------------------------------------------
     # New location
-    # ------------------------------------------------
-
     if transaction["new_location"] == 1:
 
-        score += 2
+        score += 3
 
         reasons.append(
             "Transaction from a new location"
         )
 
 
-    # ------------------------------------------------
-    # International
-    # ------------------------------------------------
-
+    # International transaction
     if transaction["international"] == 1:
 
-        score += 2
+        score += 3
 
         reasons.append(
             "International transaction"
         )
 
 
-    # ------------------------------------------------
-    # High transaction velocity
-    # ------------------------------------------------
+    # ==================================================
+    # VELOCITY
+    # ==================================================
 
     if transaction["transactions_last_10min"] >= 5:
 
@@ -165,10 +328,6 @@ def calculate_rule_score(transaction):
         )
 
 
-    # ------------------------------------------------
-    # Extremely high transaction velocity
-    # ------------------------------------------------
-
     if transaction["transactions_last_10min"] >= 10:
 
         score += 5
@@ -178,9 +337,18 @@ def calculate_rule_score(transaction):
         )
 
 
-    # ------------------------------------------------
-    # Failed attempts
-    # ------------------------------------------------
+    if transaction["transactions_last_10min"] >= 15:
+
+        score += 4
+
+        reasons.append(
+            "Very high transaction velocity"
+        )
+
+
+    # ==================================================
+    # FAILED ATTEMPTS
+    # ==================================================
 
     if transaction["failed_attempts_10min"] >= 3:
 
@@ -191,9 +359,18 @@ def calculate_rule_score(transaction):
         )
 
 
-    # ------------------------------------------------
-    # Amount anomaly
-    # ------------------------------------------------
+    # ==================================================
+    # AMOUNT
+    # ==================================================
+
+    if transaction["amount_ratio"] > 2:
+
+        score += 3
+
+        reasons.append(
+            "Transaction amount is more than twice the user's normal amount"
+        )
+
 
     if transaction["amount_ratio"] > 5:
 
@@ -204,10 +381,6 @@ def calculate_rule_score(transaction):
         )
 
 
-    # ------------------------------------------------
-    # Extremely high amount anomaly
-    # ------------------------------------------------
-
     if transaction["amount_ratio"] > 10:
 
         score += 5
@@ -217,9 +390,9 @@ def calculate_rule_score(transaction):
         )
 
 
-    # ------------------------------------------------
-    # Merchant risk
-    # ------------------------------------------------
+    # ==================================================
+    # MERCHANT
+    # ==================================================
 
     if transaction["merchant_risk"] >= 7:
 
@@ -230,9 +403,40 @@ def calculate_rule_score(transaction):
         )
 
 
-    # ------------------------------------------------
-    # Unusual hour
-    # ------------------------------------------------
+    if transaction["merchant_risk"] >= 9:
+
+        score += 2
+
+        reasons.append(
+            "Extremely high-risk merchant"
+        )
+
+
+    # ==================================================
+    # DISTANCE
+    # ==================================================
+
+    if transaction["distance_from_home"] >= 50:
+
+        score += 2
+
+        reasons.append(
+            "Transaction occurred far from user's normal location"
+        )
+
+
+    if transaction["distance_from_home"] >= 200:
+
+        score += 3
+
+        reasons.append(
+            "Transaction occurred extremely far from user's normal location"
+        )
+
+
+    # ==================================================
+    # UNUSUAL TIME
+    # ==================================================
 
     if transaction["unusual_hour"] == 1:
 
@@ -243,6 +447,120 @@ def calculate_rule_score(transaction):
         )
 
 
+    # ==================================================
+    # BEHAVIORAL PATTERNS
+    # ==================================================
+
+    amount_ratio = transaction["amount_ratio"]
+
+    velocity = transaction["transactions_last_10min"]
+
+    merchant_risk = transaction["merchant_risk"]
+
+
+    # --------------------------------------------------
+    # PATTERN 1
+    # High amount + high velocity
+    # --------------------------------------------------
+
+    if (
+        amount_ratio > 2
+        and
+        velocity >= 5
+    ):
+
+        score += 5
+
+        reasons.append(
+            "Unusually high amount combined with high transaction velocity"
+        )
+
+
+    # --------------------------------------------------
+    # PATTERN 2
+    # High merchant + high velocity
+    # --------------------------------------------------
+
+    if (
+        merchant_risk >= 7
+        and
+        velocity >= 5
+    ):
+
+        score += 3
+
+        reasons.append(
+            "High-risk merchant combined with high transaction velocity"
+        )
+
+
+    # --------------------------------------------------
+    # PATTERN 3
+    # High amount + high merchant
+    # --------------------------------------------------
+
+    if (
+        amount_ratio > 2
+        and
+        merchant_risk >= 7
+    ):
+
+        score += 3
+
+        reasons.append(
+            "High transaction amount combined with a high-risk merchant"
+        )
+
+
+    # --------------------------------------------------
+    # PATTERN 4
+    # Three suspicious signals together
+    # --------------------------------------------------
+
+    if (
+        amount_ratio > 2
+        and
+        velocity >= 5
+        and
+        merchant_risk >= 7
+    ):
+
+        score += 5
+
+        reasons.append(
+            "Multiple suspicious signals occurring together"
+        )
+
+
+    # ==================================================
+    # STEALTH / LOW-AND-SLOW PATTERN
+    # ==================================================
+
+    if (
+        amount_ratio >= 2
+        and
+        amount_ratio <= 5
+        and
+        velocity >= 5
+        and
+        merchant_risk >= 7
+        and
+        transaction["new_device"] == 0
+        and
+        transaction["new_location"] == 0
+    ):
+
+        reasons.append(
+            "Potential low-and-slow fraud pattern: "
+            "moderately unusual amount with repeated transactions "
+            "and a high-risk merchant"
+        )
+
+
+    # ==================================================
+    # RETURN
+    # ==================================================
+
     return score, reasons
 
 
@@ -252,9 +570,8 @@ def calculate_rule_score(transaction):
 
 def calculate_anomaly_score(transaction):
 
-    X = pd.DataFrame(
-        [[transaction[feature] for feature in FEATURES]],
-        columns=FEATURES
+    X = create_anomaly_dataframe(
+        transaction
     )
 
 
@@ -262,13 +579,6 @@ def calculate_anomaly_score(transaction):
         anomaly_model.decision_function(X)[0]
     )
 
-
-    # ------------------------------------------------
-    # Convert Isolation Forest score
-    # into approximately 0-100 risk score.
-    #
-    # More negative = more anomalous.
-    # ------------------------------------------------
 
     anomaly_score = 50 - (
         raw_score * 250
@@ -295,28 +605,28 @@ def calculate_anomaly_score(transaction):
 
 def calculate_risk(transaction):
 
-    X = pd.DataFrame(
-        [[transaction[feature] for feature in FEATURES]],
-        columns=FEATURES
+
+    # ==================================================
+    # XGBOOST
+    # ==================================================
+
+    X = create_ml_dataframe(
+        transaction
     )
 
-
-    # ==================================================
-    # XGBOOST FRAUD PROBABILITY
-    # ==================================================
 
     fraud_probability = float(
         fraud_model.predict_proba(X)[0][1]
     )
 
 
-    fraud_score = float(
+    fraud_score = (
         fraud_probability * 100
     )
 
 
     # ==================================================
-    # ANOMALY SCORE
+    # ANOMALY
     # ==================================================
 
     anomaly_score = calculate_anomaly_score(
@@ -325,7 +635,7 @@ def calculate_risk(transaction):
 
 
     # ==================================================
-    # BUSINESS RULE SCORE
+    # RULE ENGINE
     # ==================================================
 
     rule_score, reasons = calculate_rule_score(
@@ -334,7 +644,7 @@ def calculate_risk(transaction):
 
 
     # ==================================================
-    # SHAP EXPLANATION
+    # SHAP
     # ==================================================
 
     shap_explanations = calculate_shap_explanation(
@@ -343,11 +653,11 @@ def calculate_risk(transaction):
 
 
     # ==================================================
-    # CONVERT RULE SCORE TO 0-100
+    # NORMALIZE RULE SCORE
     # ==================================================
 
     rule_score_normalized = min(
-        rule_score / 31 * 100,
+        rule_score / 60 * 100,
         100
     )
 
@@ -358,18 +668,17 @@ def calculate_risk(transaction):
 
     final_score = (
 
-        fraud_score * 0.60
+        fraud_score * 0.45
 
         +
 
-        anomaly_score * 0.25
+        anomaly_score * 0.30
 
         +
 
-        rule_score_normalized * 0.15
+        rule_score_normalized * 0.25
 
     )
-
 
     final_score = round(
         min(
@@ -378,6 +687,20 @@ def calculate_risk(transaction):
         ),
         2
     )
+
+    # ==================================================
+    # BEHAVIORAL RISK ESCALATION
+    # ==================================================
+
+    if (
+        anomaly_score >= 70
+        and
+        rule_score_normalized >= 40
+        and
+        final_score < 31
+    ):
+
+        final_score = 31
 
 
     # ==================================================
@@ -402,7 +725,7 @@ def calculate_risk(transaction):
 
 
     # ==================================================
-    # RETURN RESULT
+    # RETURN
     # ==================================================
 
     return {
@@ -459,37 +782,37 @@ if __name__ == "__main__":
 
     test_transaction = {
 
-        "amount": 50000,
+        "amount": 7500,
 
         "avg_user_amount": 2000,
 
-        "amount_ratio": 25,
+        "amount_ratio": 3.75,
 
-        "transactions_last_10min": 10,
+        "transactions_last_10min": 12,
 
-        "new_device": 1,
+        "new_device": 0,
 
-        "new_location": 1,
+        "new_location": 0,
 
-        "international": 1,
+        "international": 0,
 
-        "merchant_risk": 9,
+        "merchant_risk": 8,
 
-        "account_age_days": 30,
+        "account_age_days": 800,
 
-        "device_age_days": 5,
+        "device_age_days": 300,
 
-        "distance_from_home": 1500,
+        "distance_from_home": 80,
 
-        "failed_attempts_10min": 5,
+        "failed_attempts_10min": 0,
 
-        "hour": 2,
+        "hour": 17,
 
-        "day_of_week": 6,
+        "day_of_week": 2,
 
-        "is_weekend": 1,
+        "is_weekend": 0,
 
-        "unusual_hour": 1
+        "unusual_hour": 0
     }
 
 
@@ -503,39 +826,48 @@ if __name__ == "__main__":
     print("RISK ENGINE TEST")
     print("======================================")
 
+
     print(
         "Fraud Probability:",
         result["fraud_probability"]
     )
+
 
     print(
         "Fraud Score:",
         result["fraud_score"]
     )
 
+
     print(
         "Anomaly Score:",
         result["anomaly_score"]
     )
+
 
     print(
         "Rule Score:",
         result["rule_score"]
     )
 
+
     print(
         "Final Risk Score:",
         result["final_risk_score"]
     )
+
 
     print(
         "Risk Level:",
         result["risk_level"]
     )
 
+
     print()
 
+
     print("Business Rule Reasons:")
+
 
     for reason in result["reasons"]:
 
@@ -544,9 +876,12 @@ if __name__ == "__main__":
             reason
         )
 
+
     print()
 
+
     print("SHAP Explanations:")
+
 
     for item in result["shap_explanations"]:
 
